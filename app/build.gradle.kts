@@ -82,6 +82,9 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
 
+            applicationIdSuffix = ".personal"
+            versionNameSuffix = "-personal"
+
             signingConfig = debug.signingConfig
 
             isProfileable = true
