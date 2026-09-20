@@ -34,7 +34,7 @@ android {
         applicationId = "app.mihon"
 
         versionCode = 30
-        versionName = "0.20.4.1"
+        versionName = "0.20.4"
 
         buildConfigField("String", "COMMIT_COUNT", "\"${getLatestCommitCount()}\"")
         buildConfigField("String", "COMMIT_SHA", "\"${getLatestCommitSha()}\"")
@@ -83,6 +83,7 @@ android {
             isShrinkResources = true
 
             applicationIdSuffix = ".personal"
+            versionNameSuffix = ".${getLatestCommitCount()}"
 
             signingConfig = debug.signingConfig
 

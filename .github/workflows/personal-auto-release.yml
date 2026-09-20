@@ -1,0 +1,150 @@
+name: Personal Auto Release
+
+# Watches upstream mihonapp/mihon and, when it moves, merges it into `personal`,
+# builds, and publishes a signed release so the app's updater picks it up.
+#
+# NOTE: scheduled workflows only run from the repository's *default* branch,
+# which is why `personal` is set as the default branch of this fork.
+#
+# A release is published only when the version (upstream versionName + this
+# branch's commit count) has no tag yet, so personalization-only commits also
+# produce a release, and no-op runs do nothing.
+
+on:
+  schedule:
+    - cron: '0 3 * * *' # daily at 03:00 UTC
+  workflow_dispatch:
+
+env:
+  MIHON_GITHUB_RELEASE: true
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  sync-and-release:
+    name: Sync upstream & release
+    runs-on: 'ubuntu-24.04'
+
+    steps:
+      - name: Checkout personal
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: personal
+          fetch-depth: 0
+
+      - name: Merge upstream
+        id: merge
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git remote add upstream https://github.com/mihonapp/mihon.git
+          git fetch --no-tags upstream main
+
+          if git merge-base --is-ancestor upstream/main HEAD; then
+            echo "upstream/main is already merged"
+            echo "merged=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if ! git merge --no-edit upstream/main; then
+            echo "::error::merge conflict with upstream/main; resolve it on the personal branch manually"
+            echo "conflicted files:"
+            git diff --name-only --diff-filter=U
+            exit 1
+          fi
+
+          echo "merged=true" >> "$GITHUB_OUTPUT"
+
+      - name: Compute version
+        id: version
+        run: |
+          set -euo pipefail
+
+          # Keep in sync with versionNameSuffix in app/build.gradle.kts.
+          base="$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)"
+          version="$base.$(git rev-list --count HEAD)"
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=personal-$version" >> "$GITHUB_OUTPUT"
+          echo "resolved version: $version"
+
+      - name: Check whether already released
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if gh release view "${{ steps.version.outputs.tag }}" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "${{ steps.version.outputs.tag }} already released, nothing to do"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up JDK
+        if: steps.check.outputs.skip == 'false'
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          java-version-file: .github/.java-version
+          distribution: temurin
+
+      - name: Set up Gradle
+        if: steps.check.outputs.skip == 'false'
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+
+      - name: Build
+        if: steps.check.outputs.skip == 'false'
+        run: ./gradlew :app:assembleRelease
+        env:
+          storeFileBase64: ${{ secrets.SIGNING_KEY }}
+          storePassword: ${{ secrets.KEY_STORE_PASSWORD }}
+          keyAlias: ${{ secrets.ALIAS }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+
+      - name: Verify built version
+        if: steps.check.outputs.skip == 'false'
+        run: |
+          set -euo pipefail
+          built="$(grep -oP 'VERSION_NAME = "\K[^"]+' app/build/generated/source/buildConfig/release/eu/kanade/tachiyomi/BuildConfig.java)"
+          if [ "$built" != "${{ steps.version.outputs.version }}" ]; then
+            echo "::error::computed version '${{ steps.version.outputs.version }}' but build produced '$built'"
+            exit 1
+          fi
+
+      - name: Push merge
+        if: steps.check.outputs.skip == 'false' && steps.merge.outputs.merged == 'true'
+        run: git push origin HEAD:personal
+
+      - name: Stage APKs
+        if: steps.check.outputs.skip == 'false'
+        run: |
+          set -euo pipefail
+          version="${{ steps.version.outputs.version }}"
+          mkdir -p stage
+          cp app/build/outputs/apk/release/app-universal-release.apk "stage/mihon-$version.apk"
+          for abi in arm64-v8a armeabi-v7a x86 x86_64; do
+            cp "app/build/outputs/apk/release/app-$abi-release.apk" "stage/mihon-$abi-$version.apk"
+          done
+          ls -l stage
+
+      - name: Create release
+        if: steps.check.outputs.skip == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          version="${{ steps.version.outputs.version }}"
+          gh release create "${{ steps.version.outputs.tag }}" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$(git rev-parse HEAD)" \
+            --title "Mihon Personal $version" \
+            --notes "Auto-built from \`personal\` at $(git rev-parse --short HEAD), tracking upstream mihonapp/mihon." \
+            stage/*.apk
