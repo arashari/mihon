@@ -4,53 +4,100 @@
     <img src="./.github/assets/logo.png" alt="Mihon logo" title="Mihon logo" width="80"/>
 </a>
 
-# Mihon [App](#)
+# Mihon Personal
 
-### Full-featured reader
-Discover and read manga, webtoons, comics, and more – easier than ever on your Android device.
+A personal fork of [Mihon](https://github.com/mihonapp/mihon) carrying a couple of
+unmerged patches, built with its own identity and release channel.
 
-[![Discord server](https://img.shields.io/discord/1195734228319617024.svg?label=&labelColor=6A7EC2&color=7389D8&logo=discord&logoColor=FFFFFF)](https://discord.gg/mihon)
-[![GitHub downloads](https://img.shields.io/github/downloads/mihonapp/mihon/total?label=downloads&labelColor=27303D&color=0D1117&logo=github&logoColor=FFFFFF&style=flat)](https://mihon.app/download)
+**Not an official Mihon build.** It installs *alongside* the official app as
+`app.mihon.personal`, is signed with a private key, and updates from this fork's
+releases.
 
-[![CI](https://img.shields.io/github/actions/workflow/status/mihonapp/mihon/build.yml?labelColor=27303D)](https://github.com/mihonapp/mihon/actions/workflows/build_push.yml)
-[![License: Apache-2.0](https://img.shields.io/github/license/mihonapp/mihon?labelColor=27303D&color=0877d2)](/LICENSE)
-[![Translation status](https://img.shields.io/weblate/progress/mihon?labelColor=27303D&color=946300)](https://hosted.weblate.org/engage/mihon/)
+</div>
 
-## Download
+## What's different from upstream
 
-[![Mihon Stable](https://img.shields.io/github/release/mihonapp/mihon.svg?maxAge=3600&label=Stable&labelColor=06599d&color=043b69)](https://mihon.app/download)
-[![Mihon Beta](https://img.shields.io/github/v/release/mihonapp/mihon-preview.svg?maxAge=3600&label=Beta&labelColor=2c2c47&color=1c1c39)](https://mihon.app/download)
+**Installs alongside official Mihon.** Its own package (`app.mihon.personal`),
+label (*Mihon Personal*), icon (purple) and app data. Library, history, settings
+and tracker logins are fully independent from the official app. Debug builds use
+`app.mihon.dev`.
 
-*Requires Android 8.0 or higher.*
+**Carried patches.** Open upstream pull requests that are not merged yet:
 
-## Features
+| PR | Change |
+| --- | --- |
+| [#3974](https://github.com/mihonapp/mihon/pull/3974) | Fetch chapters when batch downloading unfetched library manga |
+| [#3975](https://github.com/mihonapp/mihon/pull/3975) | Add a "Delete temporary files" action to the download queue |
 
-<div align="left">
+**Self-updating.** The built-in updater is re-pointed at this fork, so new
+releases appear in-app under *About → Check for updates*.
+
+**Shared downloads (optional).** Pointing this build and official Mihon at the
+same storage folder lets them share downloaded chapters: paths are derived from
+the source, manga title and a hash of the chapter URL, so both compute identical
+filenames. Each app has a *Reindex downloads* action if it doesn't pick them up.
+Library data is still private to each app.
+
+## Install
+
+Requires Android 8.0 or higher.
+
+```bash
+adb install -r mihon-arm64-v8a-<version>.apk
+```
+
+Grab the asset matching your device ABI from
+[the latest release](../../releases/latest) — `arm64-v8a` for most phones, or the
+universal APK if unsure.
+
+Because it is signed with a different key than official Mihon, it can never
+update *over* it. The two coexist as separate apps, so installing this does not
+affect an existing Mihon install or its data.
+
+## Building
+
+```bash
+./gradlew :app:assembleRelease   # minified release, package app.mihon.personal
+./gradlew :app:assembleDebug     # debug, package app.mihon.dev
+```
+
+Release builds are signed using `keystore.properties` at the repo root, which is
+git-ignored.
+
+## Releases
+
+Releases are produced by the **Personal Upstream Sync** workflow, run by hand
+from the Actions tab (it is not on a schedule):
+
+```bash
+gh workflow run "Personal Upstream Sync" --repo arashari/mihon --ref personal
+```
+
+It merges `mihonapp/mihon` `main` into `personal` — keeping this repo's own
+`.github/workflows` and `README.md` — builds, signs, and publishes the result as
+`personal-<version>`.
+
+The version is upstream's `versionName` with the branch commit count appended as
+a fourth component, e.g. `0.20.4.8021`. The updater only compares as many
+components as the installed version has, so **the fourth component must stay** —
+publishing a three-component tag would mean the update is silently never offered.
+
+## Upstream
+
+Everything below is inherited from the upstream project.
+
+### Features
 
 * Local reading of content.
 * A configurable reader with multiple viewers, reading directions and other settings.
-* Tracker support: [MangaBaka](https://mangabaka.org), [MyAnimeList](https://myanimelist.net/), [AniList](https://anilist.co/), [Kitsu](https://kitsu.app/), [MangaUpdates](https://mangaupdates.com), [Shikimori](https://shikimori.one), [Bangumi](https://bgm.tv/), and [Hikka](https://hikka.io/) support.
+* Tracker support: [MangaBaka](https://mangabaka.org), [MyAnimeList](https://myanimelist.net/), [AniList](https://anilist.co/), [Kitsu](https://kitsu.app/), [MangaUpdates](https://mangaupdates.com), [Shikimori](https://shikimori.one), [Bangumi](https://bgm.tv/), and [Hikka](https://hikka.io/).
 * Categories to organize your library.
 * Light and dark themes.
 * Schedule updating your library for new chapters.
 * Create backups locally to read offline or to your desired cloud service.
 * Plus much more...
 
-</div>
-
-## Contributing
-
 [Code of conduct](./CODE_OF_CONDUCT.md) · [Contributing guide](./CONTRIBUTING.md)
-
-Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
-
-Before reporting a new issue, take a look at the [FAQ](https://mihon.app/docs/faq/general), the [changelog](https://mihon.app/changelogs/) and the already opened [issues](https://github.com/mihonapp/mihon/issues); if you got any questions, join our [Discord server](https://discord.gg/mihon).
-
-
-### Repositories
-
-[![mihonapp/website - GitHub](https://github-stats-extended.vercel.app/api/pin/?username=mihonapp&repo=website&bg_color=161B22&text_color=c9d1d9&title_color=0877d2&icon_color=0877d2&border_radius=8&hide_border=true&description_lines_count=2)](https://github.com/mihonapp/website/)
-[![mihonapp/bitmap.kt - GitHub](https://github-stats-extended.vercel.app/api/pin/?username=mihonapp&repo=bitmap.kt&bg_color=161B22&text_color=c9d1d9&title_color=0877d2&icon_color=0877d2&border_radius=8&hide_border=true&description_lines_count=2)](https://github.com/mihonapp/bitmap.kt/)
 
 ### Credits
 
@@ -82,5 +129,3 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 </pre>
-
-</div>

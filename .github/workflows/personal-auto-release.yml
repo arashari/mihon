@@ -59,10 +59,13 @@ jobs:
             echo "merge reported conflicts"
           fi
 
-          # Keep our own CI workflows: upstream's are irrelevant here, and
-          # GITHUB_TOKEN is not permitted to push changes to workflow files.
-          git rm -r -f -q --cached .github/workflows || true
-          git checkout HEAD -- .github/workflows
+          # Keep the files that are specific to this fork. Upstream's workflow
+          # changes are irrelevant here, and GITHUB_TOKEN is not permitted to
+          # push workflow file changes anyway.
+          for path in .github/workflows README.md; do
+            git rm -r -f -q --cached "$path" || true
+            git checkout HEAD -- "$path"
+          done
           git clean -fdq .github/workflows
 
           if git diff --name-only --diff-filter=U | grep -q .; then
