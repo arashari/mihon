@@ -1,18 +1,19 @@
-name: Personal Auto Release
+name: Personal Upstream Sync
 
-# Watches upstream mihonapp/mihon and, when it moves, merges it into `personal`,
-# builds, and publishes a signed release so the app's updater picks it up.
+# Merges upstream mihonapp/mihon into `personal`, builds, and publishes a signed
+# release so the app's built-in updater picks it up.
 #
-# NOTE: scheduled workflows only run from the repository's *default* branch,
-# which is why `personal` is set as the default branch of this fork.
+# Run it by hand from the Actions tab, or:
+#   gh workflow run "Personal Upstream Sync" --repo arashari/mihon --ref personal
+#
+# NOTE: `workflow_dispatch` requires the workflow to exist on the repository's
+# default branch, which is why this fork's default branch is `personal`.
 #
 # A release is published only when the version (upstream versionName + this
 # branch's commit count) has no tag yet, so personalization-only commits also
-# produce a release, and no-op runs do nothing.
+# produce a release, and runs with nothing new do nothing.
 
 on:
-  schedule:
-    - cron: '*/10 * * * *' # TEMP scheduler test
   workflow_dispatch:
 
 env:
