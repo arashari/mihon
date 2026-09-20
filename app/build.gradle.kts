@@ -83,7 +83,6 @@ android {
             isShrinkResources = true
 
             applicationIdSuffix = ".personal"
-            versionNameSuffix = "-personal"
 
             signingConfig = debug.signingConfig
 
