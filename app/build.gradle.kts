@@ -34,7 +34,7 @@ android {
         applicationId = "app.mihon"
 
         versionCode = 30
-        versionName = "0.20.4"
+        versionName = "0.20.4.1"
 
         buildConfigField("String", "COMMIT_COUNT", "\"${getLatestCommitCount()}\"")
         buildConfigField("String", "COMMIT_SHA", "\"${getLatestCommitSha()}\"")
@@ -92,6 +92,7 @@ android {
             proguardFiles("proguard-android-optimize.txt", "proguard-rules.pro")
 
             buildConfigField("String", "BUILD_TIME", "\"${getBuildTime(useLatestCommitTime = true)}\"")
+            buildConfigField("boolean", "UPDATER_ENABLED", "true")
         }
 
         val commonMatchingFallbacks = listOf(release.name)
